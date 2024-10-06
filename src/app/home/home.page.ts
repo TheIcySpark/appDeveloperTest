@@ -5,13 +5,13 @@ import {
   IonItem, IonList, IonButtons, IonPopover, PopoverController
 } from '@ionic/angular/standalone';
 import { NumberColorPopoverComponent } from '../number-color-popover/number-color-popover.component';
-
+import { initializeApp } from 'firebase/app'
+import { getDatabase, ref, set } from "firebase/database";
+import { environment } from 'src/environments/environment';
 
 export enum Color {
   green, red, blue
 }
-
-
 
 @Component({
   selector: 'app-home',
@@ -25,6 +25,12 @@ export enum Color {
 export class HomePage {
   constructor(private toastController: ToastController, private popoverController: PopoverController
   ) { }
+  
+
+  /**
+   *  To use firebase realtime database
+   */
+  app = initializeApp(environment.firebaseConfig);
 
   /**
    * Array that hold colors to show (based in ColorEnum)
@@ -93,6 +99,28 @@ export class HomePage {
       }
       this.colorList.push(multiples)
     }
+    this.savePetition(number, this.colorList)
+  }
+
+  /**
+   * Called each time the input is valid, so save the petition, and the numbers that are valid to the database
+   * @param number 
+   * @param colorList 
+   */
+  savePetition(number: number, colorList: Color[][]) {
+    const db = getDatabase();
+    const uniqueKey = Date.now();
+    let message = ''
+    for(let i = 0; i < colorList.length; i++){
+      message += 'El numero ' + i + ' es multiplo de: '
+      const multiples = colorList[i].map(color => this.getColorMultiple(color));
+      message += multiples.join(', ')
+      message += '. \n'
+    }
+    set(ref(db, `petition/${uniqueKey}`), {
+      number: number,
+      message: message
+    });
   }
 
   /**
@@ -131,6 +159,11 @@ export class HomePage {
     return await popover.present();
   }
 
+  /**
+   * Return what color should be used in the UI to show the corresponding multiple
+   * @param color 
+   * @returns 
+   */
   getButtonColor(color: Color[]){
     if(color.length == 0){
       return 'dark'
@@ -145,6 +178,11 @@ export class HomePage {
     }
   }
 
+  /**
+   * To disable button if it is not multiple of 3, 5, or 7
+   * @param color 
+   * @returns 
+   */
   getButtonDisabled(color: Color[]){
     if(color.length == 0){
       return true
